@@ -20,9 +20,7 @@ class CartController extends Controller
         $product_id = $request->product_id;
         $cart= auth()->user()->cart;
         $cartItem= $cart->items()->where('product_id',$product_id)->first();
-
        return response()->json($cartItem);
-
     }
 
 
@@ -49,18 +47,20 @@ class CartController extends Controller
         if($cartItem)
         {
             $cartItem->update(['quantity'=>$cartItem->quantity + $quantity]);
-
             return new CartResource($cartItem);
         }else{
             $cart = new Cart();
              $cart->user_id =$user_id;
-
              $cart->save();
-
             $cartItem = new CartItem();
-            $cartItem->cart_id = $user_id;
+            $cartItem->cart_id = $cart->id;
             $cartItem->product_id = $product_id;
             $cartItem->quantity = $quantity;
+            $productAttribute = $product->attributes()->first();
+            if ($productAttribute) {
+                $cartItem->attribute_name = $productAttribute->attribute_name;
+                $cartItem->attribute_value = $productAttribute->attribute_value;
+            }
             $cartItem->save();
             $product = Product::where('quantity','>',1);
             if($product)

@@ -25,6 +25,7 @@ class ProductController extends Controller
             ->priceRange($minPrice, $maxPrice)
             ->search($key)
             ->sort($sortKey)
+            ->load('attributes')
             ->paginate(3);
 
         return new ProductCollection($products);
@@ -41,11 +42,9 @@ class ProductController extends Controller
         $product = Product::create(array_merge($request->only([
             'name', 'description', 'image', 'price','category_id'
         ]), ['image' => $image]));
-
         $attribute = new ProductAttribute;
         $attribute->attribute_name = $request->input('attribute_name');
         $attribute->attribute_value = $request->input('attribute_value');
-
         $product->attributes()->save($attribute);
         $product->load('attributes');
         return new ProductResource($product);
@@ -69,9 +68,7 @@ class ProductController extends Controller
         $attribute->attribute_value = $request->input('attribute_value');
         $attribute->save();
     }
-
     $product->load('attributes');
-
     return new ProductResource($product);
     }
     public function destroy(Request $request, Product $Product)
