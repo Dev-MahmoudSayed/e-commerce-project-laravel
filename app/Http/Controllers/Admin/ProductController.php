@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Models\Product;
 use Illuminate\Http\Request;
+use App\Models\ProductAttribute;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Admin\Product\ProductResource;
 use App\Http\Resources\Admin\Product\ProductCollection;
@@ -32,33 +33,46 @@ class ProductController extends Controller
     {
         return new ProductResource($Product);
     }
+
     public function store(StoreProductRequest  $request)
     {
         $validate = $request->validated();
         $image = $request->file('image')->store('', ['disk' => 'image']);
         $product = Product::create(array_merge($request->only([
-            'name', 'description', 'image', 'price'
+            'name', 'description', 'image', 'price','category_id'
         ]), ['image' => $image]));
-        $product->attributes()->sync($request->attribute_ids);
 
+        $attribute = new ProductAttribute;
+        $attribute->attribute_name = $request->input('attribute_name');
+        $attribute->attribute_value = $request->input('attribute_value');
+
+        $product->attributes()->save($attribute);
+        $product->load('attributes');
         return new ProductResource($product);
     }
     public function update(UpdateProductRequest $request, Product $product)
     {
+    $validate = $request->validated();
+    if($request->hasFile('image')) {
+        $image = $request->file('image')->store('', ['disk' => 'image']);
+        $product->update(array_merge($request->only([
+            'name', 'description', 'price', 'category_id'
+        ]), ['image' => $image]));
+    } else {
+        $product->update($request->only([
+            'name', 'description', 'price', 'category_id'
+        ]));
+    }
+    if($request->has('attribute_name') && $request->has('attribute_value')) {
+        $attribute = $product->attributes()->first();
+        $attribute->attribute_name = $request->input('attribute_name');
+        $attribute->attribute_value = $request->input('attribute_value');
+        $attribute->save();
+    }
 
-        $data = $request->validated();
-            if ($request->hasFile('thumbnail')) {
-                $image =
-                    $request->file('image')->store('', ['disk' => 'image']);
-                $data['image'] = $image;
-            }
-            $product->update(array_merge($request->only([
-                'name', 'description', 'image', 'price','category_id'
-            ]), ['image' => $image]));
+    $product->load('attributes');
 
-            $product->attributes()->sync($request->attribute_id);
-
-        return new ProductResource($product);
+    return new ProductResource($product);
     }
     public function destroy(Request $request, Product $Product)
     {

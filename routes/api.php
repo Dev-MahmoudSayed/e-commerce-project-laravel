@@ -27,10 +27,8 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 //customers Route
 Route::group(['middleware' => ['auth:sanctum']], function () {
-
     Route::apiResource('admin/product',ProductController::class);
     Route::apiResource('admin/category',CategoryController::class);
-
     Route::get('/users', [AuthController::class, 'index']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::delete('/delete', [AuthController::class, 'deleteUser']);
