@@ -29,6 +29,7 @@ class StoreProductRequest extends FormRequest
             'attribute_name' => 'required|string|min:1',
             'attribute_value'=>'required|string|min:1|max:255',
             "category_id"=>"required",
+            "quantity"=>"required|numeric|min:1",
         ];
     }
 }

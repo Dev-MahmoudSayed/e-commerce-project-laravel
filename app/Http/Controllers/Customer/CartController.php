@@ -9,20 +9,20 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Resources\cart\CartResource;
+use App\Http\Resources\Cart\CartCollection;
 
 class CartController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request)
+    public function index()
     {
-        $product_id = $request->product_id;
-        $cart= auth()->user()->cart;
-        $cartItem= $cart->items()->where('product_id',$product_id)->first();
-       return response()->json($cartItem);
+        $cart = auth()->user()->cart;
+        $cartItems = $cart->items;
+     //   return response()->json($cartItems);
+        return new CartCollection($cartItems);
     }
-
 
     public function create()
     {
@@ -32,48 +32,42 @@ class CartController extends Controller
 
     public function store(Request $request )
     {
-       $user_id = Auth::user()->id;
-       $product_id = $request->product_id;
-       $quantity = $request->quantity;
-       $product = Product::where('id',$product_id)->where('quantity','>',0)->exists();
-       $cart= auth()->user()->cart;
-       if(is_null($cart)){
-        $cart=auth()->user()->cart()->create([]);
-       }
-       $cart->items;
-       $cartItem = $cart->items()->where('product_id',$product_id)->first();
-       if($product)
-       {
-        if($cartItem)
-        {
-            $cartItem->update(['quantity'=>$cartItem->quantity + $quantity]);
-            return new CartResource($cartItem);
-        }else{
-            $cart = new Cart();
-             $cart->user_id =$user_id;
-             $cart->save();
-            $cartItem = new CartItem();
-            $cartItem->cart_id = $cart->id;
-            $cartItem->product_id = $product_id;
-            $cartItem->quantity = $quantity;
-            $productAttribute = $product->attributes()->first();
-            if ($productAttribute) {
-                $cartItem->attribute_name = $productAttribute->attribute_name;
-                $cartItem->attribute_value = $productAttribute->attribute_value;
-            }
-            $cartItem->save();
-            $product = Product::where('quantity','>',1);
-            if($product)
-            {
-                $productQuantity = auth()->user()->cart->items->product['quantity'];
-                $productQuantity->update(['quantity'=> $quantity - $cartItem->quantity ]);
-            }
-            return new CartResource($cartItem);
+    $product_id = $request->product_id;
+    $quantity = $request->quantity;
+    $product = Product::where('id', $product_id)->where('quantity', '>', 0)->first();
+
+    if (!$product) {
+        return response()->json(['message' => 'Product not available or out of stock'], 404);
+    }
+
+    $cart = auth()->user()->cart;
+    if (is_null($cart)) {
+        $cart = auth()->user()->cart()->create([]);
+    }
+
+    $cartItem = $cart->items()->where('product_id', $product_id)->first();
+
+    if ($cartItem) {
+        $cartItem->update(['quantity' => $cartItem->quantity + $quantity]);
+    } else {
+        $cartItem = new CartItem();
+        $cartItem->cart_id = $cart->id;
+        $cartItem->product_id = $product_id;
+        $cartItem->quantity = $quantity;
+        $productAttribute = $product->attributes()->first();
+
+        if ($productAttribute) {
+            $cartItem->attribute_name = $productAttribute->attribute_name;
+            $cartItem->attribute_value = $productAttribute->attribute_value;
         }
-       }else
-       {
-        return response()->json(['msg'=>'product not found']);
-       }
+
+        $cartItem->save();
+    }
+
+    // Update product quantity
+    $product->update(['quantity' => $product->quantity - $quantity]);
+
+    return new CartResource($cartItem);
 
     }
 
@@ -96,18 +90,36 @@ class CartController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+        public function update(Request $request, $id)
     {
-        //
+        $quantity = $request->quantity;
+
+        $cart = auth()->user()->cart;
+        $cartItem = $cart->items()->where('id', $id)->first();
+
+        if (!$cartItem) {
+            return response()->json(['message' => 'Cart item not found'], 404);
+        }
+
+        $cartItem->update(['quantity' => $quantity]);
+
+        return response()->json(['message' => 'Cart item updated successfully']);
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy( $id)
+    public function destroy($id)
     {
-        $cartItem =CartItem::find($id);
-        $cartItem->delete();
-        return response()->json(['msg'=>'cart deleted']);
+        $cart = auth()->user()->cart;
+    $cartItem = $cart->items()->where('id', $id)->first();
+
+    if (!$cartItem) {
+        return response()->json(['message' => 'Cart item not found'], 404);
+    }
+
+    $cartItem->delete();
+
+    return response()->json(['message' => 'Cart item removed successfully']);
     }
 }

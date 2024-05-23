@@ -40,7 +40,7 @@ class ProductController extends Controller
         $validate = $request->validated();
         $image = $request->file('image')->store('', ['disk' => 'image']);
         $product = Product::create(array_merge($request->only([
-            'name', 'description', 'image', 'price','category_id'
+            'name', 'description', 'image', 'price','category_id','quantity'
         ]), ['image' => $image]));
         $attribute = new ProductAttribute;
         $attribute->attribute_name = $request->input('attribute_name');
@@ -55,11 +55,11 @@ class ProductController extends Controller
     if($request->hasFile('image')) {
         $image = $request->file('image')->store('', ['disk' => 'image']);
         $product->update(array_merge($request->only([
-            'name', 'description', 'price', 'category_id'
+            'name', 'description', 'price', 'category_id','quantity'
         ]), ['image' => $image]));
     } else {
         $product->update($request->only([
-            'name', 'description', 'price', 'category_id'
+            'name', 'description', 'price', 'category_id','quantity'
         ]));
     }
     if($request->has('attribute_name') && $request->has('attribute_value')) {
